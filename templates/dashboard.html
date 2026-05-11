@@ -1,93 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Squid Admin</title>
+    <title>Alfa Squid Enterprise</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <style>
-        :root{ --bg:#080f27; --bg2:#0c1433; --card:#121c3e; --card2:#0f1736; --line:rgba(255,255,255,0.12); --text:#e8edff; --muted:#a0add8; --green:#44d96c; --red:#ff6262; --blue:#4d8dff; }
-        *{box-sizing:border-box}
-        body{ margin:0; font-family:Inter,Segoe UI,Arial,sans-serif; color:var(--text); background:radial-gradient(circle at 20% 10%, #19275c, var(--bg) 50%) fixed; min-height: 100vh; }
-        .main{ padding:18px; max-width:1200px; margin: 0 auto; }
-        .topbar{ display:flex; justify-content: space-between; align-items:center; margin-bottom:18px; }
-        .logo{font-weight:700; font-size: 24px; letter-spacing:.3px}
-        .logo span{color:#6fe56a}
-        .card{ background:linear-gradient(180deg,var(--card),var(--card2)); border:1px solid var(--line); border-radius:16px; padding:20px; box-shadow:0 12px 24px rgba(0,0,0,.2); margin-bottom: 20px; }
-        .full{ grid-column: 1 / -1; }
-        .title{font-size:20px;font-weight:700;margin-bottom:15px}
-        .status-pill{ display:inline-block; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:700; margin-bottom: 20px;}
-        .online{ background: rgba(68, 217, 108, 0.2); color: var(--green); }
-        .offline{ background: rgba(255, 98, 98, 0.2); color: var(--red); }
-        .btn{ border:none; border-radius:10px; padding:12px 20px; font-weight:600; color:#fff; cursor:pointer; margin-right: 5px; margin-bottom: 5px; transition: 0.3s; }
-        .btn-blue{background:linear-gradient(180deg,#5a9dff,#3f7fff)}
-        .btn-green{background:linear-gradient(180deg,#62dc83,#34bb5d)}
-        .btn-red{background:linear-gradient(180deg,#ff7f7f,#ff5f5f)}
-        .grid{ display:grid; gap:20px; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); }
-        textarea{ width:100%; height:400px; background:#020617; color:#6fe56a; font-family:monospace; padding:15px; border-radius:12px; border:1px solid var(--line); resize: vertical; }
-        input, select{ background:#111; border:1px solid var(--line); color:#fff; padding:10px; border-radius:8px; width:100%; margin-bottom: 10px; }
-        footer{ text-align:center; padding:20px; color:var(--muted); font-size:14px; }
+        :root{ --bg:#020617; --card:#0f172a; --card2:#1e293b; --line:rgba(255,255,255,0.1); --text:#f1f5f9; --muted:#94a3b8; --green:#22c55e; --red:#ef4444; --blue:#3b82f6; }
+        html.theme-light{ --bg:#f8fafc; --card:#ffffff; --card2:#f1f5f9; --text:#0f172a; --line:rgba(0,0,0,0.1); }
+        *{box-sizing:border-box; transition: 0.2s;}
+        body{ margin:0; font-family: 'Inter', sans-serif; background:var(--bg); color:var(--text); }
+        .header{ background:var(--card); padding:15px 30px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;}
+        .logo{ font-size:20px; font-weight:800; letter-spacing:1px; } .logo span{ color:var(--green); }
+        .btn-theme{ background:none; border:1px solid var(--line); color:var(--text); padding:8px; border-radius:10px; cursor:pointer; font-size:18px; width:44px; height:44px; margin-right:10px;}
+        .btn-logout{ background:var(--red); color:#fff; border:none; padding:10px 24px; border-radius:12px; font-weight:700; cursor:pointer; height:44px;}
+        .top-stats{ display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:20px; padding:20px 30px; background:var(--card2); border-bottom:1px solid var(--line); }
+        .stat-item{ font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:1px;} .stat-val{ font-size:15px; font-weight:700; color:var(--text); display:block; margin-top:4px;}
+        .container{ padding:30px; max-width:1400px; margin:0 auto; display:grid; grid-template-columns: 2fr 1fr; gap:25px; }
+        .card{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .title{ font-size:16px; font-weight:700; border-left:4px solid var(--blue); padding-left:12px; margin-bottom:20px; text-transform:uppercase; }
+        .btn{ padding:12px 16px; border-radius:10px; border:none; font-weight:600; cursor:pointer; color:#fff; font-size:13px; }
+        .btn-blue{background:var(--blue)} .btn-green{background:var(--green)} .btn-red{background:var(--red)}
+        textarea{ width:100%; height:350px; background:#000; color:#4ade80; border-radius:12px; padding:15px; font-family:monospace; border:1px solid var(--line); }
+        table{ width:100%; border-collapse:collapse; } th{ text-align:left; color:var(--muted); padding-bottom:12px; font-size:12px;} td{ padding:14px 0; border-top:1px solid var(--line); font-size:13px;}
+        input, select{ width:100%; background:var(--card2); border:1px solid var(--line); color:var(--text); padding:12px; border-radius:10px; margin-bottom:10px; }
+        @media (max-width: 1000px) { .container { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-<div class="main">
-    <div class="topbar">
-        <div class="logo">ALFA <span>SQUID</span></div>
-        <div><a href="/logout" style="color:var(--muted); text-decoration:none; font-weight:bold;">Logout</a></div>
+
+<div class="header">
+    <div class="logo">ALFA<span>SQUID</span> CORE</div>
+    <div style="display:flex; align-items:center;">
+        <button class="btn-theme" onclick="toggleTheme()">☀️</button>
+        <a href="/logout"><button class="btn-logout">Logout</button></a>
+    </div>
+</div>
+
+<div class="top-stats">
+    <div class="stat-item">PROXY SERVICE <span class="stat-val" style="color:var(--green)">{{ status.upper() }}</span></div>
+    <div class="stat-item">FIREWALL <span class="stat-val" style="color:var(--blue)">{{ fw_status.upper() }}</span></div>
+    <div class="stat-item">SYSTEM UPTIME <span class="stat-val">{{ uptime }}</span></div>
+    <div class="stat-item">NODE <span class="stat-val">alfasolution.org</span></div>
+</div>
+
+<div class="container">
+    <div style="display:flex; flex-direction:column; gap:25px;">
+        <div class="card">
+            <div class="title">Network Interface Details</div>
+            <table>
+                <thead><tr><th>INTERFACE</th><th>STATE</th><th>IP ADDRESS</th><th>MAC ADDRESS</th></tr></thead>
+                <tbody>
+                    {% for iface in interfaces %}
+                    <tr>
+                        <td><b>{{ iface.name }}</b></td>
+                        <td><span style="color:var(--green)">{{ iface.state }}</span></td>
+                        <td><code>{{ iface.ip }}</code></td>
+                        <td style="color:var(--muted)">{{ iface.mac }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if installed %}
+        <div class="card">
+            <div class="title">Config Engine</div>
+            <form action="/save-config" method="post">
+                <textarea name="config_text">{{ config }}</textarea>
+                <div style="margin-top:15px; display:flex; justify-content:flex-end;">
+                    <button class="btn btn-blue">Save & Restart Proxy</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
     </div>
 
-    <div class="grid">
+    <div style="display:flex; flex-direction:column; gap:25px;">
         <div class="card">
-            <div class="title">System Control</div>
-            {% if status == 'active' %}
-                <div class="status-pill online">● SQUID RUNNING</div>
-            {% else %}
-                <div class="status-pill offline">● SQUID STOPPED</div>
-            {% endif %}
+            <div class="title">Proxy Management</div>
             <form action="/manage" method="post">
                 {% if not installed %}
                     <button name="action" value="install" class="btn btn-blue" style="width:100%">Install Squid Server</button>
                 {% else %}
-                    <button name="action" value="start" class="btn btn-green">Start</button>
-                    <button name="action" value="stop" class="btn btn-red">Stop</button>
-                    <button name="action" value="restart" class="btn btn-blue">Restart</button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                        <button name="action" value="start" class="btn btn-green">Start</button>
+                        <button name="action" value="stop" class="btn btn-red">Stop</button>
+                        <button name="action" value="restart" class="btn btn-blue" style="grid-column: span 2;">Restart Service</button>
+                    </div>
+                    <hr style="border:0; border-top:1px solid var(--line); margin:20px 0;">
+                    <button name="action" value="uninstall" class="btn btn-red" style="width:100%; opacity:0.6; font-size:11px;" onclick="return confirm('Full Uninstall?')">Remove Squid</button>
                 {% endif %}
             </form>
         </div>
 
         <div class="card">
-            <div class="title">Firewall Rules</div>
-            <div style="margin-bottom:10px;">
-                {% for p in open_ports %}
-                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:12px; margin-right:4px;">{{ p }}</span>
-                {% endfor %}
+            <div class="title">Firewall & Ports</div>
+            <div style="margin-bottom:15px; display:flex; flex-wrap:wrap; gap:5px;">
+                {% for p in open_ports %}<span style="background:var(--card2); padding:4px 10px; border-radius:6px; font-size:11px; border:1px solid var(--line);">{{ p }}</span>{% endfor %}
             </div>
-            <form action="/firewall" method="post" style="display:flex; gap:5px;">
-                <input type="text" name="port" placeholder="3128/tcp">
-                <button name="action" value="add" class="btn btn-green" style="padding:10px;">Open</button>
-            </form>
-            <form action="/firewall" method="post" style="display:flex; gap:5px;">
-                <select name="port">
-                    {% for p in open_ports %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
-                </select>
-                <button name="action" value="remove" class="btn btn-red" style="padding:10px;">Close</button>
+            <form action="/firewall-port" method="post">
+                <input type="text" name="port" placeholder="Port/tcp (e.g. 3128/tcp)">
+                <button name="action" value="add" class="btn btn-green" style="width:100%">Open Port</button>
+                <div style="margin-top:10px;"></div>
+                <select name="port">{% for p in open_ports %}<option value="{{ p }}">{{ p }}</option>{% endfor %}</select>
+                <button name="action" value="remove" class="btn btn-red" style="width:100%">Close Selected</button>
             </form>
         </div>
 
-        {% if installed %}
-        <div class="card full">
-            <div class="title">Squid Configuration Editor</div>
-            <form action="/save-config" method="post">
-                <textarea name="config_text">{{ config }}</textarea><br><br>
-                <button type="submit" class="btn btn-blue">Save & Apply Changes</button>
+        <div class="card" style="border:1px solid var(--red);">
+            <div class="title" style="border-left-color:var(--red)">System Operations</div>
+            <form action="/server" method="post">
+                <button name="action" value="reboot" class="btn btn-red" style="width:100%; margin-bottom:10px;" onclick="return confirm('Reboot Now?')">Reboot Server</button>
+                <button name="action" value="shutdown" class="btn btn-red" style="width:100%; opacity:0.5;" onclick="return confirm('Shutdown?')">Power Off</button>
             </form>
         </div>
-        <div class="card full">
-            <div class="title">Maintenance Zone</div>
-            <form action="/manage" method="post">
-                <button name="action" value="uninstall" class="btn btn-red" onclick="return confirm('Delete everything?')">Uninstall Squid</button>
-            </form>
-        </div>
-        {% endif %}
     </div>
 </div>
-<footer>© 2026 Rizwan. All rights reserved.</footer>
-</body></html>
+
+<script>
+    function toggleTheme() {
+        const isLight = document.documentElement.classList.toggle('theme-light');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    }
+    if (localStorage.getItem('theme') === 'light') document.documentElement.classList.add('theme-light');
+</script>
+</body>
+</html>

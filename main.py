@@ -1,28 +1,19 @@
-import os
-import subprocess
-from fastapi import FastAPI, Request, Form, Depends, HTTPException
+import os, subprocess, datetime
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI()
 
-# Configuration from Environment (setup by systemd EnvironmentFile)
-SESSION_SECRET = os.getenv("SESSION_SECRET", "squid_secret_fallback")
+# Configuration
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASS", "password")
-
-app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "squid_enterprise_secret"))
 templates = Jinja2Templates(directory="templates")
-
-# Paths
-SQUID_CONF = "/etc/squid/squid.conf"
 
 def run_cmd(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
-def is_logged_in(request: Request):
-    return request.session.get("logged_in") == True
 
 @app.get("/login")
 async def login_page(request: Request):
@@ -42,60 +33,59 @@ async def logout(request: Request):
 
 @app.get("/")
 async def dashboard(request: Request):
-    if not is_logged_in(request):
-        return RedirectResponse(url="/login")
+    if not request.session.get("logged_in"): return RedirectResponse("/login")
     
-    # Squid Info
     is_installed = run_cmd("rpm -q squid").returncode == 0
     status = run_cmd("systemctl is-active squid").stdout.strip()
+    fw_status = run_cmd("systemctl is-active firewalld").stdout.strip()
+    uptime = run_cmd("uptime -p").stdout.strip()
+    open_ports = run_cmd("firewall-cmd --list-ports").stdout.strip().split()
     
-    # Firewall Info
-    fw_cmd = run_cmd("firewall-cmd --list-ports")
-    open_ports = fw_cmd.stdout.strip().split()
+    # Network Details
+    net_cmd = run_cmd("ip -br -4 addr show").stdout.strip().split("\n")
+    interfaces = []
+    for line in net_cmd:
+        parts = line.split()
+        if len(parts) >= 3:
+            name = parts[0]
+            state = parts[1]
+            ip = parts[2]
+            mac = run_cmd(f"cat /sys/class/net/{name}/address").stdout.strip()
+            interfaces.append({"name": name, "state": state, "ip": ip, "mac": mac})
 
-    # Config Content
-    config_content = ""
-    if os.path.exists(SQUID_CONF):
-        with open(SQUID_CONF, 'r') as f:
-            config_content = f.read()
+    config = ""
+    if os.path.exists("/etc/squid/squid.conf"):
+        with open("/etc/squid/squid.conf", 'r') as f: config = f.read()
 
-    return templates.TemplateResponse(
-        request=request,
-        name="dashboard.html",
-        context={
-            "installed": is_installed, 
-            "status": status, 
-            "config": config_content,
-            "open_ports": open_ports
-        }
-    )
+    return templates.TemplateResponse(request=request, name="dashboard.html", context={
+        "installed": is_installed, "status": status, "fw_status": fw_status, 
+        "config": config, "open_ports": open_ports, "interfaces": interfaces,
+        "uptime": uptime, "year": datetime.datetime.now().year
+    })
 
 @app.post("/manage")
-async def manage_squid(request: Request, action: str = Form(...)):
-    if not is_logged_in(request): raise HTTPException(401)
+async def manage_squid(action: str = Form(...)):
     if action == "install":
-        run_cmd("dnf install squid httpd-tools -y")
-        run_cmd("systemctl enable --now squid")
+        run_cmd("dnf install squid httpd-tools -y && systemctl enable --now squid")
     elif action == "uninstall":
         run_cmd("systemctl stop squid && dnf remove squid -y")
     else:
         run_cmd(f"systemctl {action} squid")
     return RedirectResponse("/", status_code=303)
 
-@app.post("/save-config")
-async def save_config(request: Request, config_text: str = Form(...)):
-    if not is_logged_in(request): raise HTTPException(401)
-    with open(SQUID_CONF, 'w') as f:
-        f.write(config_text)
-    run_cmd("systemctl restart squid")
+@app.post("/server")
+async def manage_server(action: str = Form(...)):
+    if action == "reboot": run_cmd("reboot")
+    elif action == "shutdown": run_cmd("shutdown now")
     return RedirectResponse("/", status_code=303)
 
-@app.post("/firewall")
-async def manage_firewall(request: Request, action: str = Form(...), port: str = Form(None)):
-    if not is_logged_in(request): raise HTTPException(401)
-    if action == "add" and port:
-        run_cmd(f"firewall-cmd --permanent --add-port={port}")
-    elif action == "remove" and port:
-        run_cmd(f"firewall-cmd --permanent --remove-port={port}")
-    run_cmd("firewall-cmd --reload")
+@app.post("/firewall-port")
+async def manage_ports(action: str = Form(...), port: str = Form(None)):
+    if port: run_cmd(f"firewall-cmd --permanent --{action}-port={port} && firewall-cmd --reload")
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/save-config")
+async def save_config(config_text: str = Form(...)):
+    with open("/etc/squid/squid.conf", 'w') as f: f.write(config_text)
+    run_cmd("systemctl restart squid")
     return RedirectResponse("/", status_code=303)
