@@ -32,7 +32,8 @@ This project provides:
 dnf install epel-release -y
 dnf install python3 python3-pip python3-devel gcc httpd-tools certbot firewalld openssl -y
 
-
+## Activate your venv first, then run:
+pip install fastapi uvicorn[standard] jinja2 python-multipart itsdangerous starlette
 
 ## Environment Variables
 
@@ -55,13 +56,13 @@ python -m pip install fastapi uvicorn
 Start the app:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 8444
 ```
 
 Then open:
 
 ```text
-http://localhost:8000/login
+http://localhost:8444/login
 ```
 
 ## Usage
