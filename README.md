@@ -1,4 +1,4 @@
-# Python Squid Admin
+# Squid Admin Web-panel
 
 A small FastAPI-based administration UI for managing Squid proxy service and firewall rules on a Linux host.
 
