@@ -89,7 +89,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install fastapi uvicorn python-multipart jinja2
 
-## Create the Environment File
+## Create the Environment File (you can change your admin pass in this file)
 nano /etc/squid-panel.env
 
 SESSION_SECRET=SQUID_SECRET_CHANGE_ME
