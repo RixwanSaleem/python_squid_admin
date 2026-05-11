@@ -28,6 +28,12 @@ This project provides:
 - `firewalld` and `firewall-cmd`
 - Systemd for controlling the Squid service
 
+## Required System Packages
+dnf install epel-release -y
+dnf install python3 python3-pip python3-devel gcc httpd-tools certbot firewalld openssl -y
+
+
+
 ## Environment Variables
 
 The application reads these environment variables:
@@ -73,6 +79,71 @@ http://localhost:8000/login
 - The default credentials are insecure; update `ADMIN_USER`/`ADMIN_PASS` before deployment.
 - Directly editing `/etc/squid/squid.conf` and executing system commands from a web UI carries risk — only run on trusted hosts.
 
+
+## Structure Setup
+
+mkdir -p /opt/squid-panel/python_squid_admin/var
+cd /opt/squid-panel/python_squid_admin
+python3 -m venv venv
+source venv/bin/activate
+pip install fastapi uvicorn python-multipart jinja2
+
+## Create the Environment File
+nano /etc/squid-panel.env
+
+SESSION_SECRET=SQUID_SECRET_CHANGE_ME
+ADMIN_USER=admin
+ADMIN_PASS=YourSecurePassword
+
+SQUID_CONF=/etc/squid/squid.conf
+SQUID_SERVICE=squid
+SQUID_PORT=3128
+
+## firewall 
+firewall-cmd --permanent --add-port=8444/tcp
+firewall-cmd --reload
+
+## Create the Environment File
+nano /etc/squid-panel.env
+
+SESSION_SECRET=SQUID_SECRET_CHANGE_ME
+ADMIN_USER=admin
+ADMIN_PASS=YourSecurePassword
+
+SQUID_CONF=/etc/squid/squid.conf
+SQUID_SERVICE=squid
+SQUID_PORT=3128
+
+## Configure the Systemd Service
+nano /etc/systemd/system/squid-panel.service
+
+[Unit]
+Description=Squid Proxy Manager
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/squid-panel/python_squid_admin
+EnvironmentFile=/etc/squid-panel.env
+ExecStart=/opt/squid-panel/python_squid_admin/venv/bin/uvicorn main:app \
+    --host 0.0.0.0 \
+    --port 8444 \
+    --ssl-certfile /etc/letsencrypt/live/YOUR-DOMAIN.COM/fullchain.pem \
+    --ssl-keyfile /etc/letsencrypt/live/YOUR-DOMAIN.COM/privkey.pem
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
+
+
+## Service start
+systemctl enable --now squid-panel
+systemctl restart squid-panel
+
+
+
 ## Author 
 
 Rizwan Saleem
+
+
